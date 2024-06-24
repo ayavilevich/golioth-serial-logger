@@ -7,3 +7,4 @@
 /build*
 /twister-out*
 __pycache__/
+/app/build*

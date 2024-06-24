@@ -4,7 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define LOG_MSG_SIZE 256
+// #define LOG_MSG_SIZE 256
+#define LOG_MSG_SIZE 1024
 
 extern struct k_msgq uart_msgq;
 

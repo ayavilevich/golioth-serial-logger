@@ -8,3 +8,4 @@ project(golioth-serial-logger)
 
 target_sources(app PRIVATE src/main.c)
 target_sources(app PRIVATE src/serial_listener.c)
+target_sources(app PRIVATE src/logger.c)

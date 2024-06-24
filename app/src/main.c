@@ -11,6 +11,7 @@
 #include <samples/common/sample_credentials.h>
 
 #include "serial_listener.h"
+#include "logger.h"
 
 LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
@@ -50,12 +51,13 @@ int main(void)
 	golioth_client_register_event_callback(client, on_client_event, NULL);
 
 	/* Process any log messages in the queue */
+	LOG_MODULE_DECLARE(u, LOG_LEVEL_INF);
 	while (k_msgq_get(&uart_msgq, &msg, K_FOREVER) == 0) {
 		/* Wait forever for the Golioth client to be connected */
 		golioth_client_wait_for_connect(client, -1);
 
-		/* The Golioth logging backend will send this message to the Golioth cloud */
-		LOG_INF("target_device: %s", msg);
+		// send out
+		logger_log(msg);
 	}
 
 	return 0;

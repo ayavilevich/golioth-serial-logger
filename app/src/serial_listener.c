@@ -18,12 +18,25 @@ static const struct device *const uart_dev = DEVICE_DT_GET(UART_DEVICE_NODE);
 LOG_MODULE_REGISTER(serial_listener, LOG_LEVEL_DBG);
 
 /* queue to store log messages */
-#define LOG_MSG_QUEUE_SIZE 100
+// #define LOG_MSG_QUEUE_SIZE 100
+#define LOG_MSG_QUEUE_SIZE 50
 K_MSGQ_DEFINE(uart_msgq, LOG_MSG_SIZE, LOG_MSG_QUEUE_SIZE, 1);
 
 /* receive buffer used in UART ISR callback */
 static char rx_buf[LOG_MSG_SIZE];
 static int rx_buf_pos;
+
+static void flush()
+{
+	/* terminate string */
+	rx_buf[rx_buf_pos] = '\0';
+
+	/* if queue is full, message is silently dropped */
+	k_msgq_put(&uart_msgq, &rx_buf, K_NO_WAIT);
+
+	/* reset the buffer (it was copied to the msgq) */
+	rx_buf_pos = 0;
+}
 
 /*
  * Read characters from UART until line end is detected. Afterwards push the
@@ -43,19 +56,16 @@ void serial_cb(const struct device *dev, void *user_data)
 
 	/* read until FIFO empty */
 	while (uart_fifo_read(uart_dev, &c, 1) == 1) {
-		if ((c == '\n' || c == '\r') && rx_buf_pos > 0) {
-			/* terminate string */
-			rx_buf[rx_buf_pos] = '\0';
-
-			/* if queue is full, message is silently dropped */
-			k_msgq_put(&uart_msgq, &rx_buf, K_NO_WAIT);
-
-			/* reset the buffer (it was copied to the msgq) */
-			rx_buf_pos = 0;
-		} else if (rx_buf_pos < (sizeof(rx_buf) - 1)) {
+		if (rx_buf_pos == (sizeof(rx_buf) - 1)) { // did we fill the buffer?
+			flush();
+		}
+		if ((c == '\n' || c == '\r')) { // if new line
+			if (rx_buf_pos > 0) { // and not empty line, then
+				flush();
+			}
+		} else if (rx_buf_pos < (sizeof(rx_buf) - 1)) { // not a new line character
 			rx_buf[rx_buf_pos++] = c;
 		}
-		/* else: characters beyond buffer size are dropped */
 	}
 }
 
@@ -65,7 +75,7 @@ int serial_listener_init(void)
 
 	/* Make sure the UART device exists and is ready */
 	if (!device_is_ready(uart_dev)) {
-		printk("UART device is not ready!");
+		printk("UART device is not ready!\n");
 		return -ENODEV;
 	}
 
